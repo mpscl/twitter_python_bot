@@ -1,0 +1,76 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+require 'yaml'
+require 'fileutils'
+
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+
+config = {
+  local: 'config/vg-local.yml'
+}
+
+options = YAML.load_file config[:local]
+
+Vagrant.configure("2") do |config|
+  config.vm.provider "virtualbox"
+
+  config.vm.provider "virtualbox" do |vb|
+    # machine cpus count
+    vb.cpus = options['cpus']
+    # machine memory size
+    vb.memory = options['memory']
+  end
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://atlas.hashicorp.com/search.
+  config.vm.box = "bento/ubuntu-17.10"
+  # config.vm.box_version = "201710.25.0"
+  config.vm.hostname = options['hostname']
+  config.vm.network options['network'], ip: options['ip']
+
+  # config.ssh.forward_agent = true
+  config.vm.synced_folder options['synced_folder'] , '/vagrant', type: "nfs"
+  
+  config.vm.provider "virtualbox" do |vb|
+      vb.name = options['machine_name']
+  end
+
+  config.vm.define 'py_api'
+
+  config.ssh.username = 'vagrant'
+  config.ssh.password = 'vagrant'
+
+  config.vm.provision :hostmanager
+  config.hostmanager.enabled            = true
+  config.hostmanager.manage_host        = true
+  config.hostmanager.ignore_private_ip  = false
+  config.hostmanager.include_offline    = true
+
+
+
+
+
+
+  config.vm.provision "shell", inline: <<-SHELL
+  	apt-get update
+  SHELL
+
+  # config.vm.provision "shell", privileged: false, path: "scripts/install_rvm.sh", args: "stable"
+  # config.vm.provision "shell", privileged: false, path: "scripts/install_ruby.sh", args: ruby_version
+
+  
+  # make sure that the port Rails uses is forwarded to VM
+  # config.vm.network "forwarded_port", guest: 3002, host: 3002 
+  # current working folder basename
+  base_name = `basename $(pwd)`
+  config.vm.provision 'shell', path: 'scripts/Vagrant.bootstrap.sh', run: 'always'
+end
